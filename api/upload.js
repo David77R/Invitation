@@ -1,21 +1,28 @@
 import { put } from '@vercel/blob';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Método no permitido' });
-    return;
-  }
-
-  const rawName = req.headers['x-filename'] || 'foto.jpg';
-  const filename = decodeURIComponent(rawName).replace(/[^a-zA-Z0-9._-]/g, '_');
-  const contentType = req.headers['content-type'] || 'application/octet-stream';
-
-  if (!Buffer.isBuffer(req.body)) {
-    res.status(400).json({ error: 'Formato de imagen no reconocido' });
-    return;
-  }
-
   try {
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'Método no permitido' });
+      return;
+    }
+
+    if (!Buffer.isBuffer(req.body)) {
+      res.status(400).json({ error: 'Formato de imagen no reconocido' });
+      return;
+    }
+
+    const rawName = req.headers['x-filename'] || 'foto.jpg';
+    let filename;
+    try {
+      filename = decodeURIComponent(rawName).replace(/[^a-zA-Z0-9._-]/g, '_');
+    } catch (err) {
+      filename = String(rawName).replace(/[^a-zA-Z0-9._-]/g, '_');
+    }
+    if (!filename) filename = 'foto.jpg';
+
+    const contentType = req.headers['content-type'] || 'application/octet-stream';
+
     const blob = await put(`fotos-mariana/${Date.now()}-${filename}`, req.body, {
       access: 'public',
       contentType,
