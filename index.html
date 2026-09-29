@@ -885,9 +885,9 @@
 
     .admin-list {
       display: none;
-      max-height: 55vh;
+      max-height: 60vh;
       overflow-y: auto;
-      margin-top: 14px;
+      margin-top: 4px;
       text-align: left;
     }
 
@@ -895,34 +895,135 @@
       display: block;
     }
 
-    .admin-summary {
-      margin: 0 0 12px;
-      font-size: 16px;
-      color: var(--accent);
+    .admin-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 2px 0 18px;
+      color: var(--accent-soft);
+    }
+
+    .admin-divider::before,
+    .admin-divider::after {
+      content: '';
+      height: 1px;
+      width: 46px;
+      background: linear-gradient(to right, transparent, var(--accent-soft));
+    }
+
+    .admin-divider::after {
+      background: linear-gradient(to left, transparent, var(--accent-soft));
+    }
+
+    .admin-divider svg {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+    }
+
+    .admin-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 18px;
+    }
+
+    .admin-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, #FBF0F5 0%, #F3DEE9 100%);
+      border: 1px solid var(--accent-soft);
+      color: var(--accent-dark);
+      font-size: 13px;
       font-weight: 600;
+      letter-spacing: 0.04em;
     }
 
-    .admin-row {
-      padding: 10px 0;
-      border-top: 1px solid var(--line);
-      font-size: 15px;
-    }
-
-    .admin-row strong {
-      color: var(--accent);
-    }
-
-    .admin-row .admin-song {
-      display: block;
-      margin-top: 2px;
-      font-size: 14px;
-    }
-
-    .admin-row .admin-msg {
-      display: block;
-      margin-top: 2px;
-      font-size: 14px;
+    .admin-chip.declined {
+      background: var(--bg);
+      border-color: var(--line);
       color: var(--muted);
+    }
+
+    .admin-empty {
+      padding: 24px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 15px;
+      font-style: italic;
+    }
+
+    .admin-card {
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      border-radius: 16px;
+      background: #FFFFFF;
+      border: 1px solid var(--line);
+      box-shadow: 0 2px 8px rgba(155, 47, 99, 0.06);
+      font-size: 15px;
+      opacity: 0;
+      animation: admin-card-in 0.5s ease forwards;
+    }
+
+    .admin-card.declined {
+      opacity: 0.7;
+    }
+
+    @keyframes admin-card-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .admin-row-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .admin-name {
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .admin-guests {
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-dark);
+      background: var(--bg);
+      padding: 3px 10px;
+      border-radius: 12px;
+      white-space: nowrap;
+    }
+
+    .admin-guests.declined {
+      color: var(--muted);
+    }
+
+    .admin-card .admin-song {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--accent-dark);
+    }
+
+    .admin-card .admin-msg {
+      display: block;
+      margin-top: 6px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--line);
+      font-size: 14px;
+      font-style: italic;
+      color: var(--muted);
+      line-height: 1.5;
     }
 
     dialog {
@@ -1364,6 +1465,9 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
     <h2 class="script" id="admin-title">Panel de Mariana</h2>
+    <div class="admin-divider" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>
+    </div>
     <form class="form" id="admin-form">
       <label class="field">Clave
         <input name="key" type="password" required autocomplete="off">
@@ -1717,10 +1821,26 @@
       const notAttending = rsvps.filter((r) => !r.attending);
       const totalGuests = attending.reduce((sum, r) => sum + (Number(r.guests) || 1), 0);
 
-      let html = '<p class="admin-summary">' + attending.length + ' confirmados (' + totalGuests + ' personas) · ' + notAttending.length + ' no asisten</p>';
-      rsvps.forEach((r) => {
-        html += '<div class="admin-row"><strong>' + escapeHtml(r.name) + '</strong>' +
-          (r.attending ? ' · ' + escapeHtml(r.guests) + ' personas' : ' · no asiste');
+      if (!rsvps.length) {
+        $('admin-list').innerHTML = '<p class="admin-empty">Aún no hay confirmaciones</p>';
+        $('admin-list').classList.add('is-visible');
+        $('admin-form').style.display = 'none';
+        return;
+      }
+
+      let html = '<div class="admin-stats">';
+      html += '<span class="admin-chip">✓ ' + attending.length + ' confirmado' + (attending.length === 1 ? '' : 's') + '</span>';
+      html += '<span class="admin-chip">👥 ' + totalGuests + ' persona' + (totalGuests === 1 ? '' : 's') + '</span>';
+      if (notAttending.length) {
+        html += '<span class="admin-chip declined">✕ ' + notAttending.length + ' no asiste' + (notAttending.length === 1 ? '' : 'n') + '</span>';
+      }
+      html += '</div>';
+
+      rsvps.forEach((r, i) => {
+        const declined = !r.attending;
+        html += '<div class="admin-card' + (declined ? ' declined' : '') + '" style="animation-delay:' + Math.min(i * 0.05, 0.6) + 's">';
+        html += '<div class="admin-row-top"><span class="admin-name">' + escapeHtml(r.name) + '</span>';
+        html += '<span class="admin-guests' + (declined ? ' declined' : '') + '">' + (declined ? 'No asiste' : escapeHtml(String(r.guests)) + ' personas') + '</span></div>';
         if (r.song) html += '<span class="admin-song">🎵 ' + escapeHtml(r.song) + '</span>';
         if (r.message) html += '<span class="admin-msg">"' + escapeHtml(r.message) + '"</span>';
         html += '</div>';
