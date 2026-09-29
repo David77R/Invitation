@@ -1,4 +1,4 @@
-const { put } = require('@vercel/blob');
+const { put } = require('../lib/vercel-blob-bundle.cjs');
 
 module.exports = async function handler(req, res) {
   try {

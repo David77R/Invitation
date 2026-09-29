@@ -1,4 +1,4 @@
-const { list, put } = require('@vercel/blob');
+const { list, put } = require('../lib/vercel-blob-bundle.cjs');
 
 const DATA_PATH = 'rsvps/confirmaciones.json';
 

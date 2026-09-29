@@ -1,4 +1,4 @@
-const { list } = require('@vercel/blob');
+const { list } = require('../lib/vercel-blob-bundle.cjs');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
