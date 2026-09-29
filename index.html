@@ -985,7 +985,8 @@
     }
 
     .admin-card {
-      padding: 14px 16px;
+      position: relative;
+      padding: 14px 40px 14px 16px;
       margin-bottom: 10px;
       border-radius: 16px;
       background: #FFFFFF;
@@ -994,6 +995,33 @@
       font-size: 15px;
       opacity: 0;
       animation: admin-card-in 0.5s ease forwards;
+    }
+
+    .admin-remove {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 50%;
+      background: var(--bg);
+      color: var(--muted);
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .admin-remove svg {
+      width: 11px;
+      height: 11px;
+    }
+
+    .admin-remove:hover {
+      background: #F3DEE9;
+      color: var(--accent-dark);
     }
 
     .admin-card.declined {
@@ -1817,6 +1845,8 @@
       doc.save('confirmacion-mariana-xv.pdf');
     });
 
+    let adminKey = '';
+
     $('admin-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const key = $('admin-form').key.value;
@@ -1830,12 +1860,32 @@
           toast('Clave incorrecta');
           return;
         }
+        adminKey = key;
         const data = await res.json();
         renderAdminList(data.rsvps || []);
       } catch (err) {
         toast('No se pudo cargar la lista');
       }
     });
+
+    async function deleteRsvp(timestamp) {
+      if (!confirm('¿Borrar esta confirmación?')) return;
+      try {
+        const res = await fetch('/api/rsvp-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: adminKey, timestamp })
+        });
+        if (!res.ok) {
+          toast('No se pudo borrar');
+          return;
+        }
+        const data = await res.json();
+        renderAdminList(data.rsvps || []);
+      } catch (err) {
+        toast('No se pudo borrar');
+      }
+    }
 
     function escapeHtml(str) {
       const div = document.createElement('div');
@@ -1866,6 +1916,7 @@
       rsvps.forEach((r, i) => {
         const declined = !r.attending;
         html += '<div class="admin-card' + (declined ? ' declined' : '') + '" style="animation-delay:' + Math.min(i * 0.05, 0.6) + 's">';
+        html += '<button type="button" class="admin-remove" data-ts="' + escapeHtml(r.timestamp) + '" aria-label="Borrar confirmación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
         html += '<div class="admin-row-top"><span class="admin-name">' + escapeHtml(r.name) + '</span>';
         html += '<span class="admin-guests' + (declined ? ' declined' : '') + '">' + (declined ? 'No asiste' : escapeHtml(String(r.guests)) + ' personas') + '</span></div>';
         if (r.song) html += '<span class="admin-song">🎵 ' + escapeHtml(r.song) + '</span>';
@@ -1876,6 +1927,9 @@
       $('admin-list').innerHTML = html;
       $('admin-list').classList.add('is-visible');
       $('admin-form').style.display = 'none';
+      $('admin-list').querySelectorAll('.admin-remove').forEach((btn) => {
+        btn.addEventListener('click', () => deleteRsvp(btn.dataset.ts));
+      });
     }
 
     $('dlg-admin').addEventListener('close', () => {
