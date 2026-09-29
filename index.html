@@ -1828,7 +1828,8 @@
           const res = await fetch('/api/upload', {
             method: 'POST',
             headers: {
-              'Content-Type': uploadBody.type || entry.file.type || 'application/octet-stream',
+              'Content-Type': 'application/octet-stream',
+              'x-content-type': uploadBody.type || entry.file.type || 'image/jpeg',
               'x-filename': encodeURIComponent(entry.file.name || 'foto.jpg')
             },
             body: uploadBody

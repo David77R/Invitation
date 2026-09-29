@@ -21,7 +21,7 @@ module.exports = async function handler(req, res) {
     }
     if (!filename) filename = 'foto.jpg';
 
-    const contentType = req.headers['content-type'] || 'application/octet-stream';
+    const contentType = req.headers['x-content-type'] || 'image/jpeg';
 
     const blob = await put(`fotos-mariana/${Date.now()}-${filename}`, req.body, {
       access: 'public',
