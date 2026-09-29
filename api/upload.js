@@ -30,6 +30,9 @@ module.exports = async function handler(req, res) {
     });
     res.status(200).json({ url: blob.url });
   } catch (error) {
-    res.status(500).json({ error: 'No se pudo subir la foto' });
+    res.status(500).json({
+      error: 'No se pudo subir la foto',
+      detail: String((error && error.message) || error)
+    });
   }
 };
