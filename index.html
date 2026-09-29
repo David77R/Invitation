@@ -877,6 +877,57 @@
       letter-spacing: 0.1em;
     }
 
+    .admin-trigger {
+      margin-top: 28px;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      opacity: 0.55;
+      text-decoration: underline;
+    }
+
+    .admin-list {
+      display: none;
+      max-height: 55vh;
+      overflow-y: auto;
+      margin-top: 14px;
+      text-align: left;
+    }
+
+    .admin-list.is-visible {
+      display: block;
+    }
+
+    .admin-summary {
+      margin: 0 0 12px;
+      font-size: 16px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .admin-row {
+      padding: 10px 0;
+      border-top: 1px solid var(--line);
+      font-size: 15px;
+    }
+
+    .admin-row strong {
+      color: var(--accent);
+    }
+
+    .admin-row .admin-song {
+      display: block;
+      margin-top: 2px;
+      font-size: 14px;
+    }
+
+    .admin-row .admin-msg {
+      display: block;
+      margin-top: 2px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
     dialog {
       width: calc(100% - 32px);
       max-width: 380px;
@@ -1262,6 +1313,7 @@
     <section class="closing reveal">
       <svg class="icon" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5z"/></svg>
       <p class="caps">¡Espero que puedas celebrar conmigo esta noche tan especial!</p>
+      <a class="admin-trigger" href="#" data-open="dlg-admin">Ver invitaciones</a>
     </section>
   </main>
 
@@ -1291,6 +1343,9 @@
           <option>4</option>
         </select>
       </label>
+      <label class="field">Canción que no puede faltar (opcional)
+        <input name="song" placeholder="Artista - Canción" autocomplete="off">
+      </label>
       <label class="field">Mensaje para Mariana (opcional)
         <textarea name="message"></textarea>
       </label>
@@ -1299,12 +1354,28 @@
     <div class="thanks" role="status">
       <svg class="icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>
       <p id="rsvp-thanks"></p>
+      <button class="silver" type="button" id="rsvp-pdf">Descargar confirmación (PDF)</button>
       <button class="silver" type="button" data-close>Cerrar</button>
     </div>
   </dialog>
 
+  <dialog id="dlg-admin" aria-labelledby="admin-title">
+    <button class="close" type="button" data-close aria-label="Cerrar">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <h2 class="script" id="admin-title">Panel de Mariana</h2>
+    <form class="form" id="admin-form">
+      <label class="field">Clave
+        <input name="key" type="password" required autocomplete="off">
+      </label>
+      <button class="silver" type="submit">Entrar</button>
+    </form>
+    <div class="admin-list" id="admin-list"></div>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script>
     const EVENT_DATE = new Date('2026-10-17T20:00:00');
 
@@ -1514,7 +1585,10 @@
     document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
 
     document.querySelectorAll('[data-open]').forEach((btn) => {
-      btn.addEventListener('click', () => $(btn.dataset.open).showModal());
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        $(btn.dataset.open).showModal();
+      });
     });
 
     document.querySelectorAll('dialog').forEach((dlg) => {
@@ -1529,21 +1603,139 @@
       $('guests-field').style.display = attending ? '' : 'none';
     });
 
-    rsvpForm.addEventListener('submit', (e) => {
+    let lastRsvp = null;
+
+    rsvpForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const name = rsvpForm.name.value.trim().split(' ')[0];
+      const fullName = rsvpForm.name.value.trim();
+      const firstName = fullName.split(' ')[0];
       const attending = rsvpForm.attend.value === 'si';
-      const message = attending
-        ? '¡Gracias, ' + name + '! Te espero en la pista.'
-        : 'Gracias por avisar, ' + name + '. ¡Te voy a extrañar!';
-      $('rsvp-thanks').textContent = message;
+      const guests = attending ? rsvpForm.guests.value : '1';
+      const song = rsvpForm.song.value.trim();
+      const message = rsvpForm.message.value.trim();
+
+      lastRsvp = { name: fullName, attending, guests, song, message };
+
+      const thanksMessage = attending
+        ? '¡Gracias, ' + firstName + '! Te espero en la pista.'
+        : 'Gracias por avisar, ' + firstName + '. ¡Te voy a extrañar!';
+      $('rsvp-thanks').textContent = thanksMessage;
       $('dlg-rsvp').classList.add('is-done');
       $('rsvp-done').textContent = attending ? 'Asistencia confirmada ✓' : 'Respuesta enviada';
       $('rsvp-done').style.display = 'block';
       $('rsvp-btn').textContent = 'Editar respuesta';
+
+      try {
+        await fetch('/api/rsvp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lastRsvp)
+        });
+      } catch (err) {
+        // Si el guardado falla (ej. probando fuera de Vercel), el PDF sigue sirviendo como respaldo.
+      }
     });
 
     $('dlg-rsvp').addEventListener('close', () => $('dlg-rsvp').classList.remove('is-done'));
+
+    $('rsvp-pdf').addEventListener('click', () => {
+      if (!lastRsvp || !window.jspdf) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(155, 47, 99);
+      doc.text('Mariana · Mis XV años', 20, 25);
+
+      doc.setFontSize(13);
+      doc.setTextColor(90, 90, 90);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Confirmación de asistencia', 20, 35);
+
+      let y = 55;
+      const addLine = (label, value) => {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(60, 60, 60);
+        doc.text(label + ':', 20, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(value || '—'), 70, y);
+        y += 10;
+      };
+
+      addLine('Nombre', lastRsvp.name);
+      addLine('Asistencia', lastRsvp.attending ? 'Sí, ahí estará' : 'No podrá ir');
+      if (lastRsvp.attending) addLine('Personas', lastRsvp.guests);
+      addLine('Canción sugerida', lastRsvp.song);
+
+      y += 2;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(60, 60, 60);
+      doc.text('Mensaje:', 20, y);
+      y += 8;
+      doc.setFont('helvetica', 'normal');
+      const messageLines = doc.splitTextToSize(lastRsvp.message || '—', 170);
+      doc.text(messageLines, 20, y);
+      y += messageLines.length * 7 + 14;
+
+      doc.setFontSize(10);
+      doc.setTextColor(140, 140, 140);
+      doc.text('17 de octubre, 2026 · 8:00 P. M. · Estadero de la Gloria de Dios', 20, 280);
+
+      doc.save('confirmacion-mariana-xv.pdf');
+    });
+
+    $('admin-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const key = $('admin-form').key.value;
+      try {
+        const res = await fetch('/api/rsvp-list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key })
+        });
+        if (!res.ok) {
+          toast('Clave incorrecta');
+          return;
+        }
+        const data = await res.json();
+        renderAdminList(data.rsvps || []);
+      } catch (err) {
+        toast('No se pudo cargar la lista');
+      }
+    });
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function renderAdminList(rsvps) {
+      const attending = rsvps.filter((r) => r.attending);
+      const notAttending = rsvps.filter((r) => !r.attending);
+      const totalGuests = attending.reduce((sum, r) => sum + (Number(r.guests) || 1), 0);
+
+      let html = '<p class="admin-summary">' + attending.length + ' confirmados (' + totalGuests + ' personas) · ' + notAttending.length + ' no asisten</p>';
+      rsvps.forEach((r) => {
+        html += '<div class="admin-row"><strong>' + escapeHtml(r.name) + '</strong>' +
+          (r.attending ? ' · ' + escapeHtml(r.guests) + ' personas' : ' · no asiste');
+        if (r.song) html += '<span class="admin-song">🎵 ' + escapeHtml(r.song) + '</span>';
+        if (r.message) html += '<span class="admin-msg">"' + escapeHtml(r.message) + '"</span>';
+        html += '</div>';
+      });
+
+      $('admin-list').innerHTML = html;
+      $('admin-list').classList.add('is-visible');
+      $('admin-form').style.display = 'none';
+    }
+
+    $('dlg-admin').addEventListener('close', () => {
+      $('admin-list').classList.remove('is-visible');
+      $('admin-list').innerHTML = '';
+      $('admin-form').style.display = 'flex';
+      $('admin-form').reset();
+    });
 
     const photos = [];
     const placeholderIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/></svg>';
@@ -1589,6 +1781,37 @@
     }
     loadPhotos();
 
+    function compressImage(file, maxDim, quality) {
+      return new Promise((resolve) => {
+        if (!file.type || !file.type.startsWith('image/')) {
+          resolve(file);
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+            if (width > maxDim || height > maxDim) {
+              const scale = maxDim / Math.max(width, height);
+              width = Math.round(width * scale);
+              height = Math.round(height * scale);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', quality);
+          };
+          img.onerror = () => resolve(file);
+          img.src = reader.result;
+        };
+        reader.onerror = () => resolve(file);
+        reader.readAsDataURL(file);
+      });
+    }
+
     $('photo-input').addEventListener('change', async (e) => {
       const files = Array.from(e.target.files || []);
       e.target.value = '';
@@ -1600,13 +1823,14 @@
 
       await Promise.all(entries.map(async (entry) => {
         try {
+          const uploadBody = await compressImage(entry.file, 1600, 0.82);
           const res = await fetch('/api/upload', {
             method: 'POST',
             headers: {
-              'Content-Type': entry.file.type || 'application/octet-stream',
+              'Content-Type': uploadBody.type || entry.file.type || 'application/octet-stream',
               'x-filename': encodeURIComponent(entry.file.name || 'foto.jpg')
             },
-            body: entry.file
+            body: uploadBody
           });
           if (!res.ok) throw new Error('upload failed');
           const data = await res.json();
