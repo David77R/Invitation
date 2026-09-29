@@ -859,6 +859,33 @@
       display: block;
     }
 
+    .tile {
+      position: relative;
+    }
+
+    .tile-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 50%;
+      background: rgba(20, 8, 14, 0.55);
+      color: #fff;
+      cursor: pointer;
+      line-height: 1;
+      z-index: 2;
+    }
+
+    .tile-remove svg {
+      width: 12px;
+      height: 12px;
+    }
+
     .rsvp-done {
       display: none;
       margin: 16px 0 0;
@@ -1881,6 +1908,14 @@
           img.loading = 'lazy';
           img.alt = 'Foto compartida por un invitado';
           tile.appendChild(img);
+
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'tile-remove';
+          removeBtn.setAttribute('aria-label', 'Borrar foto');
+          removeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+          removeBtn.addEventListener('click', () => removePhoto(entry));
+          tile.appendChild(removeBtn);
         } else {
           tile.innerHTML = placeholderIcon;
         }
@@ -1888,6 +1923,23 @@
       }
     }
     renderGallery();
+
+    async function removePhoto(entry) {
+      if (!confirm('¿Borrar esta foto?')) return;
+      const idx = photos.indexOf(entry);
+      if (idx === -1) return;
+      photos.splice(idx, 1);
+      renderGallery();
+      try {
+        await fetch('/api/delete-photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: entry.url })
+        });
+      } catch (err) {
+        // La foto ya se quitó de la vista; si falla el borrado en el servidor no bloqueamos al invitado.
+      }
+    }
 
     async function loadPhotos() {
       try {
