@@ -1,6 +1,6 @@
-import { list } from '@vercel/blob';
+const { list } = require('@vercel/blob');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Método no permitido' });
     return;
@@ -15,4 +15,4 @@ export default async function handler(req, res) {
   } catch (error) {
     res.status(500).json({ error: 'No se pudieron cargar las fotos' });
   }
-}
+};

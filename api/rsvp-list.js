@@ -1,8 +1,8 @@
-import { list } from '@vercel/blob';
+const { list } = require('@vercel/blob');
 
 const DATA_PATH = 'rsvps/confirmaciones.json';
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Método no permitido' });
     return;
@@ -28,4 +28,4 @@ export default async function handler(req, res) {
   } catch (error) {
     res.status(500).json({ error: 'No se pudo cargar la lista' });
   }
-}
+};

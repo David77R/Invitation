@@ -1,6 +1,6 @@
-import { put } from '@vercel/blob';
+const { put } = require('@vercel/blob');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     if (req.method !== 'POST') {
       res.status(405).json({ error: 'Método no permitido' });
@@ -32,4 +32,4 @@ export default async function handler(req, res) {
   } catch (error) {
     res.status(500).json({ error: 'No se pudo subir la foto' });
   }
-}
+};
