@@ -1017,7 +1017,7 @@
 
     .admin-list {
       display: none;
-      max-height: 60vh;
+      max-height: 72vh;
       overflow-y: auto;
       margin-top: 4px;
       text-align: left;
@@ -1091,20 +1091,47 @@
 
     .admin-card {
       position: relative;
-      padding: 14px 40px 14px 16px;
-      margin-bottom: 10px;
-      border-radius: 16px;
-      background: #FFFFFF;
+      padding: 32px 40px 16px 18px;
+      margin-bottom: 16px;
+      border-radius: 4px 4px 14px 14px;
+      background: #FFFDF9;
       border: 1px solid var(--line);
-      box-shadow: 0 2px 8px rgba(155, 47, 99, 0.06);
+      box-shadow: 0 4px 16px rgba(155, 47, 99, 0.09);
       font-size: 15px;
       opacity: 0;
+      overflow: hidden;
       animation: admin-card-in 0.5s ease forwards;
+    }
+
+    .admin-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 26px;
+      background:
+        linear-gradient(135deg, transparent 49.5%, var(--accent-soft) 50.5%) top left / 50% 100% no-repeat,
+        linear-gradient(225deg, transparent 49.5%, var(--accent-soft) 50.5%) top right / 50% 100% no-repeat;
+      opacity: 0.4;
+    }
+
+    .admin-card::after {
+      content: '';
+      position: absolute;
+      top: 21px;
+      left: 50%;
+      width: 7px;
+      height: 7px;
+      margin-left: -3.5px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.5;
     }
 
     .admin-remove {
       position: absolute;
-      top: 10px;
+      top: 32px;
       right: 10px;
       width: 22px;
       height: 22px;
@@ -1199,6 +1226,11 @@
 
     dialog::backdrop {
       background: rgba(40, 10, 25, 0.45);
+    }
+
+    #dlg-admin {
+      max-width: 480px;
+      max-height: 88vh;
     }
 
     dialog .script {
@@ -2066,13 +2098,13 @@
       }
     });
 
-    async function deleteRsvp(timestamp) {
+    async function deleteRsvp(url) {
       if (!confirm('¿Borrar esta confirmación?')) return;
       try {
         const res = await fetch('/api/rsvp-delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: adminKey, timestamp })
+          body: JSON.stringify({ key: adminKey, url })
         });
         if (!res.ok) {
           toast('No se pudo borrar');
@@ -2114,7 +2146,7 @@
       rsvps.forEach((r, i) => {
         const declined = !r.attending;
         html += '<div class="admin-card' + (declined ? ' declined' : '') + '" style="animation-delay:' + Math.min(i * 0.05, 0.6) + 's">';
-        html += '<button type="button" class="admin-remove" data-ts="' + escapeHtml(r.timestamp) + '" aria-label="Borrar confirmación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+        html += '<button type="button" class="admin-remove" data-url="' + escapeHtml(r.url || '') + '" aria-label="Borrar confirmación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
         html += '<div class="admin-row-top"><span class="admin-name">' + escapeHtml(r.name) + '</span>';
         html += '<span class="admin-guests' + (declined ? ' declined' : '') + '">' + (declined ? 'No asiste' : escapeHtml(String(r.guests)) + ' personas') + '</span></div>';
         if (r.song) html += '<span class="admin-song">🎵 ' + escapeHtml(r.song) + '</span>';
@@ -2126,7 +2158,7 @@
       $('admin-list').classList.add('is-visible');
       $('admin-form').style.display = 'none';
       $('admin-list').querySelectorAll('.admin-remove').forEach((btn) => {
-        btn.addEventListener('click', () => deleteRsvp(btn.dataset.ts));
+        btn.addEventListener('click', () => deleteRsvp(btn.dataset.url));
       });
     }
 

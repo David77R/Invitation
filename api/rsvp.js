@@ -1,19 +1,4 @@
-const { list, put } = require('../lib/vercel-blob-bundle.cjs');
-
-const DATA_PATH = 'rsvps/confirmaciones.json';
-
-async function readData() {
-  try {
-    const { blobs } = await list({ prefix: DATA_PATH });
-    const match = blobs.find((blob) => blob.pathname === DATA_PATH);
-    if (!match) return [];
-    const res = await fetch(match.url);
-    if (!res.ok) return [];
-    return await res.json();
-  } catch (error) {
-    return [];
-  }
-}
+const { put } = require('../lib/vercel-blob-bundle.cjs');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -37,13 +22,10 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const data = await readData();
-    data.push(entry);
-    await put(DATA_PATH, JSON.stringify(data), {
+    await put(`rsvps/${Date.now()}.json`, JSON.stringify(entry), {
       access: 'public',
       contentType: 'application/json',
-      addRandomSuffix: false,
-      allowOverwrite: true
+      addRandomSuffix: true
     });
     res.status(200).json({ ok: true });
   } catch (error) {

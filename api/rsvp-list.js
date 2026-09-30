@@ -1,7 +1,5 @@
 const { list } = require('../lib/vercel-blob-bundle.cjs');
 
-const DATA_PATH = 'rsvps/confirmaciones.json';
-
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Método no permitido' });
@@ -15,16 +13,24 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { blobs } = await list({ prefix: DATA_PATH });
-    const match = blobs.find((blob) => blob.pathname === DATA_PATH);
-    if (!match) {
-      res.status(200).json({ rsvps: [] });
-      return;
-    }
-    const dataRes = await fetch(match.url);
-    const data = dataRes.ok ? await dataRes.json() : [];
-    data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    res.status(200).json({ rsvps: data });
+    const { blobs } = await list({ prefix: 'rsvps/' });
+    const results = await Promise.all(
+      blobs.map(async (blob) => {
+        try {
+          const r = await fetch(blob.url);
+          if (!r.ok) return null;
+          const data = await r.json();
+          data.url = blob.url;
+          return data;
+        } catch (err) {
+          return null;
+        }
+      })
+    );
+    const rsvps = results
+      .filter(Boolean)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    res.status(200).json({ rsvps });
   } catch (error) {
     res.status(500).json({ error: 'No se pudo cargar la lista' });
   }
