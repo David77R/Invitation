@@ -1017,7 +1017,7 @@
 
     .admin-list {
       display: none;
-      max-height: 72vh;
+      max-height: 78vh;
       overflow-y: auto;
       margin-top: 4px;
       text-align: left;
@@ -1229,8 +1229,10 @@
     }
 
     #dlg-admin {
+      width: calc(100% - 20px);
       max-width: 480px;
-      max-height: 88vh;
+      max-height: 90vh;
+      padding: 22px 16px 18px;
     }
 
     dialog .script {
@@ -1287,6 +1289,40 @@
     .field textarea {
       min-height: 80px;
       resize: vertical;
+    }
+
+    .password-wrap {
+      position: relative;
+    }
+
+    .password-wrap input {
+      width: 100%;
+      padding-right: 42px;
+    }
+
+    .toggle-eye {
+      position: absolute;
+      top: 50%;
+      right: 6px;
+      transform: translateY(-50%);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .toggle-eye svg {
+      width: 19px;
+      height: 19px;
+    }
+
+    .toggle-eye.is-active {
+      color: var(--accent);
     }
 
     .choice {
@@ -1670,7 +1706,12 @@
     </div>
     <form class="form" id="admin-form">
       <label class="field">Clave
-        <input name="key" type="password" required autocomplete="off">
+        <div class="password-wrap">
+          <input name="key" type="password" required autocomplete="off" id="admin-key-input">
+          <button type="button" class="toggle-eye" id="toggle-admin-key" aria-label="Mostrar clave">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
       </label>
       <button class="silver" type="submit">Entrar</button>
     </form>
@@ -2073,6 +2114,15 @@
       doc.text('17 de octubre, 2026 · 8:00 P. M. · Estadero de la Gloria de Dios', 20, 280);
 
       doc.save('confirmacion-mariana-xv.pdf');
+    });
+
+    $('toggle-admin-key').addEventListener('click', () => {
+      const input = $('admin-key-input');
+      const btn = $('toggle-admin-key');
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.classList.toggle('is-active', !showing);
+      btn.setAttribute('aria-label', showing ? 'Mostrar clave' : 'Ocultar clave');
     });
 
     let adminKey = '';
